@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>弦歌四载 与诗同行 - 国学社乐府部四周年</title>
+    
+    <!-- React 核心 -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- 样式与动画 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Framer Motion -->
+    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+    
+    <!-- 字体配置 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=LXGW+Wen+Kai+Mono+TC&family=Noto+Serif+SC:wght@300;400;700&display=swap" rel="stylesheet">
+
+    <!-- Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'yuye-pink': '#F8F2F5',
+                        'yuye-accent': '#DDD4ED',
+                        'ink-black': '#1c1917',
+                        'gold-dust': '#D4AF37',
+                        'gold-light': '#F3E5AB',
+                    },
+                    fontFamily: {
+                        sans: ['LXGW Wen Kai Mono TC', 'Noto Serif SC', 'serif'],
+                        serif: ['Noto Serif SC', 'serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* 宣纸质感噪点 */
+        body {
+            background-color: #F8F2F5;
+            color: #1c1917;
+            /* 修复：强制固定 Body，防止 scrollIntoView 导致的页面整体偏移 */
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            overflow: hidden; 
+        }
+        .noise-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        /* 修复：金粉山水背景图层 */
+        .landscape-bg {
+            position: fixed;
+            bottom: 0;
+            right: 0;
+            width: 100%; /* 覆盖右下角大部分区域 */
+            height: 100%;
+            background-image: url('assets/images/bg.png');
+            background-size: contain;
+            background-position: bottom right;
+            background-repeat: no-repeat;
+            opacity: 0.6; /* 淡淡的透明度 */
+            pointer-events: none;
+            z-index: 1; /* 在最底层，但在背景色之上 */
+            /* 遮罩：右下角可见，向左上角淡出 */
+            mask-image: linear-gradient(to top left, black 0%, transparent 50%);
+            -webkit-mask-image: linear-gradient(to left, black 0%, transparent 50%);
+        }
+
+        /* 隐藏滚动条 */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* 金粉流动字效 */
+        @keyframes goldFlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .gold-text {
+            background: linear-gradient(90deg, #1c1917 0%, #D4AF37 50%, #1c1917 100%);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: goldFlow 6s linear infinite;
+        }
+
+        /* 歌词遮罩 */
+        .mask-gradient {
+            mask-image: linear-gradient(to bottom, transparent, black 5%, black 95%, transparent);
+            -webkit-mask-image: linear-gradient(to bottom, transparent, black 5%, black 95%, transparent);
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // --- 1. 初始化依赖 ---
+        const { useState, useEffect, useRef, useMemo, useCallback } = React;
+        const { motion, AnimatePresence } = window.Motion;
+
+        // --- 本地定义图标组件 (Inline Icons) ---
+        const IconBase = ({ children, className, size = 24, ...props }) => (
+            <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width={size} 
+                height={size} 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                className={className} 
+                {...props}
+            >
+                {children}
+            </svg>
+        );
+
+        const Icons = {
+            Sparkles: (props) => (
+                <IconBase {...props}>
+                    <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+                    <path d="M5 3v4"/>
+                    <path d="M9 5H5"/>
+                </IconBase>
+            ),
+            Scroll: (props) => (
+                <IconBase {...props}>
+                    <path d="M8 21h12a2 2 0 0 0 2-2v-2H10v2a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v3h4"/>
+                    <path d="M19 17V5a2 2 0 0 0-2-2H4"/>
+                </IconBase>
+            ),
+            Music: (props) => (
+                <IconBase {...props}>
+                    <path d="M9 18V5l12-2v13"/>
+                    <circle cx="6" cy="18" r="3"/>
+                    <circle cx="18" cy="16" r="3"/>
+                </IconBase>
+            ),
+            Anchor: (props) => (
+                <IconBase {...props}>
+                    <circle cx="12" cy="5" r="3"/>
+                    <line x1="12" x2="12" y1="22" y2="8"/>
+                    <path d="M5 12H2a10 10 0 0 0 20 0h-3"/>
+                </IconBase>
+            ),
+            ChevronRight: (props) => (
+                <IconBase {...props}>
+                    <path d="m9 18 6-6-6-6"/>
+                </IconBase>
+            ),
+            Play: (props) => (
+                <IconBase {...props}>
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                </IconBase>
+            ),
+            Pause: (props) => (
+                <IconBase {...props}>
+                    <rect width="4" height="16" x="6" y="4"/>
+                    <rect width="4" height="16" x="14" y="4"/>
+                </IconBase>
+            ),
+            Mic: (props) => (
+                <IconBase {...props}>
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                    <line x1="12" x2="12" y1="19" y2="23"/>
+                    <line x1="8" x2="16" y1="23" y2="23"/>
+                </IconBase>
+            ),
+            Cake: (props) => (
+                <IconBase {...props}>
+                    <path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"/>
+                    <path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2.5-2 4-2 2.5-2 4-2 2.5-2 4-2 2.5-2 4-2 2-1 2-1"/>
+                    <path d="M2 21h20"/>
+                    <path d="M7 8v2"/>
+                    <path d="M12 8v2"/>
+                    <path d="M17 8v2"/>
+                    <path d="M7 4h.01"/>
+                    <path d="M12 4h.01"/>
+                    <path d="M17 4h.01"/>
+                </IconBase>
+            ),
+            Camera: (props) => (
+                <IconBase {...props}>
+                    <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+                    <circle cx="12" cy="13" r="3"/>
+                </IconBase>
+            ),
+            MessageSquareQuote: (props) => (
+                <IconBase {...props}>
+                    <path d="M21 11a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+                    <path d="M10 11h.01"/>
+                    <path d="M14 11h.01"/>
+                </IconBase>
+            ),
+            Quote: (props) => (
+                <IconBase {...props}>
+                    <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/>
+                    <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/>
+                </IconBase>
+            )
+        };
+        
+        const { Sparkles, Scroll, Music, Anchor, ChevronRight, Play, Pause, Mic, Cake, Camera, MessageSquareQuote, Quote } = Icons;
+
+
+        // --- 2. 模拟 LRC 歌词数据 ---
+        const SAMPLE_LRC_SULIUSHA = `[ti:溯流沙]
+[ar:]
+[al:溯流沙]
+[by:]
+[offset:0]
+[00:01.00]溯流沙
+[00:03.00]词：归荑
+[00:06.00]曲：林雨夜
+[00:09.00]监制：洪若馨
+[00:12.00]出品：上海交通大学国学社
+[00:15.00]2021年12月
+[00:20.16]挽一抔故土流沙
+[00:26.37]溯一段他乡旧话
+[00:32.05]几度春秋如何催生白发
+[00:38.18]上图书残忆寻回答
+[00:44.78]循一沿纹理繁杂
+[00:50.90]挑一缕晨曦勾画
+[00:56.66]正楷小豪下研一盏墨茶
+[01:02.74]敬那年烛火与他
+[01:08.73]月照千秋万里 明月总相似
+[01:15.19]打点模糊文字 凭信作荐纸
+[01:21.76]跋涉山水远来衔枯枝
+[01:30.77]只为来春再与你相识
+[02:01.73]滴一抹月色溶浆
+[02:07.88]拓一笔往日锋芒
+[02:13.61]金石雕栏刻录雨雪风霜
+[02:19.82]记往昔不过是平常
+[02:26.35]习一师井井有方
+[02:32.56]耐一生寂寂寒窗
+[02:38.01]迁徙入七十万页的容光
+[02:44.56]将中华文脉点亮
+[02:50.28]月照千秋万里 明月总相似
+[02:56.68]打点模糊文字 凭信作荐纸
+[03:03.24]跋涉山水远来衔枯枝
+[03:08.97]只为来春再与你相识
+[03:14.97]心随千言万语 鉴心总相思
+[03:21.33]密缝断句残篇 旧约不若此
+[03:27.93]落笔成书阅尽天下事
+[03:36.51]你我叙不完一寸青史
+[03:43.43]开一朵犹抱琵琶
+[03:49.46]溯一粒沧海流沙`;
+
+        const SAMPLE_LRC_WEIJIE = `[00:00.000]作词：【唐】杜甫
+[00:00.400]作曲：林雨夜
+[00:00.800]编曲：林雨夜、网易天音
+[00:01.200]演唱：林雨夜、ACE鸾明
+[00:01.600]出品：上海交通大学国学社
+[00:02.000]2025年1月
+[00:02.191]今夜鄜州月
+[00:06.613]闺中只独看
+[00:50.531]今夜鄜州月
+[00:55.356]闺中只独看
+[01:00.016]遥怜小儿女
+[01:04.526]未解忆长安
+[01:09.167]香雾云鬟湿
+[01:13.698]清辉玉臂寒
+[01:18.342]何时倚虚幌
+[01:22.953]双照泪痕干
+[01:27.586]今夜鄜州月
+[01:32.259]闺中只独看
+[01:36.820]遥怜小儿女
+[01:41.521]未解忆长安
+[01:46.065]香雾云鬟湿
+[01:50.663]清辉玉臂寒
+[01:55.339]何时倚虚幌
+[02:00.033]双照泪痕干
+[02:04.000]（白）
+[02:04.721]今夜鄜州月
+[02:09.051]闺中只独看
+[02:13.619]遥怜小儿女
+[02:18.185]未解忆长安
+[02:22.889]香雾云鬟湿
+[02:27.573]清辉玉臂寒
+[02:32.121]何时倚虚幌
+[02:36.391]双照泪痕干
+[03:18.000]（唱）
+[03:18.312]今夜鄜州月
+[03:22.970]闺中只独看
+[03:27.534]遥怜小儿女
+[03:32.088]未解忆长安
+[03:36.816]香雾云鬟湿
+[03:41.372]清辉玉臂寒
+[03:46.017]何时倚虚幌
+[03:50.670]双照泪痕干`;
+
+        const SAMPLE_LRC_DADONG = `[ti:大东]
+[ar:]
+[al:和诗以歌]
+[by:]
+[offset:0]
+[00:00.500]大 东
+[00:05.500]作词：《诗经》
+[00:10.500]作曲：木猫、林雨夜
+[00:15.500]编曲：林雨夜
+[00:20.500]演唱：ACE小夜
+[00:25.500]出品：上海交通大学国学社
+[00:30.500]2024年5月
+[00:34.140]有饛簋飧 有捄棘匕
+[00:41.310]周道如砥 其直如矢
+[00:48.420]君子所履 小人所视
+[00:54.120]睠言顾之 潸焉出涕
+[01:02.790]小东大东 杼柚其空
+[01:10.110]纠纠葛屦 可以履霜
+[01:17.280]佻佻公子 行彼周行
+[01:24.540]既往既来 使我心疚
+[01:31.740]有冽氿泉 无浸获薪
+[01:38.820]契契寤叹 哀我惮人
+[01:45.990]薪是获薪 尚可载也
+[01:51.870]哀我惮人 亦可息也
+[02:00.480]东人之子 职劳不来
+[02:07.590]西人之子 粲粲衣服
+[02:14.850]舟人之子 熊罴是裘
+[02:21.990]私人之子 百僚是试
+[02:29.250]或以其酒 不以其浆
+[02:35.010]鞙鞙佩璲 不以其长
+[02:43.680]维天有汉 监亦有光
+[02:48.870]跂彼织女 终日七襄
+[02:57.960]虽则七襄 不成报章
+[03:05.970]睆彼牵牛 不以服箱
+[03:12.540]东有启明 西有长庚
+[03:19.710]有捄天毕 载施之行
+[03:26.940]维南有箕 不可以簸扬
+[03:34.110]维北有斗 不可以挹酒浆
+[03:41.340]维南有箕 载翕其舌
+[03:49.470]维北有斗 西柄之揭
+`;
+
+        const SAMPLE_LRC_LAICHUN = `[00:03.380]作词：造林、林雨夜
+[00:05.380]演唱：鸾明（女1）
+[00:07.380]演唱：东方栀子·晓（女2）
+[00:09.380]制作：林雨夜
+[00:11.380]谨以此献给造林
+[00:13.380]（女1）
+[00:13.470]水亭门下巷中游
+[00:19.200]西县路前街尽头
+[00:25.320]拒马横刀抗烽火
+[00:31.350]高墙阔水护哀愁
+[00:37.290]花坊落寞行长岸
+[00:43.410]闹市伶仃坐小舟
+[00:49.320]醉卧州衢思上海
+[00:55.110]神离海上望衢州
+[01:01.380]（女2）
+[01:01.470]月自长明蝶自游
+[01:07.200]风催梨雨洒街头
+[01:13.380]孤窗倚我同垂泪
+[01:19.320]白鬓是君曾遣愁
+[01:25.380]彼岸休行多劫火
+[01:31.290]来春可拟共兰舟
+[01:37.320]无常若是有情客
+[01:43.350]也请归人到此州
+[02:12.587]（合）
+[02:13.380]彼岸休行多劫火
+[02:19.320]来春可拟共兰舟
+[02:25.290]无常若是有情客
+[02:31.350]也请归人到此州
+[02:37.080]（女1）
+[02:37.320]曾拟来春共此游
+[02:38.775]（女2）
+[02:38.960]曾拟来春共此游
+[02:43.500]（女1）
+[02:43.710]于今携手小船头
+[02:45.120]（女2）
+[02:45.210]于今携手小船头
+[02:49.260]（合）
+[02:49.320]轻摇双桨风吹软
+[02:55.110]长忆三秋雨打愁
+[03:01.320]人事凋零无去路
+[03:07.350]兰心缱绻正同舟
+[03:13.320]临行应许他年聚
+[03:19.350]约到江南第一州
+[03:25.290]约到江南第一州`;
+        const SAMPLE_LRC_JUSHAO = `[ti:聚少趁江南]
+[ar:林雨夜]
+[al:和诗以歌]
+[by:上海交通大学国学社]
+[offset:0]
+[00:01.00]聚少趁江南
+[00:03.00]词：林雨夜、花桐
+[00:06.00]曲：林雨夜
+[00:09.910]演唱：ACE鸾明/东方栀子_晓
+[00:12.910]制作：林雨夜
+[00:15.910]出品：上海交通大学国学社乐府部
+[00:25.910]2025年11月
+[00:29.910]银汉漂漂 蜉蝣寄梗
+[00:36.810]纤瓶谢了 半江晴
+[00:43.200]雨碎春衫薄 楚水接云平
+[00:50.130]孤舟欲往 浪湿青襟
+[00:58.140]寒暑养养草木初青
+[01:05.010]枯杖新痕露复盈
+[01:11.460]波声衔信小顾影入烟深
+[01:18.300]乔木含情久伫霜襟
+[01:25.440]来此世间皆过客
+[01:28.980]灯轻帐暖指深萦
+[01:33.000]玉兰未落时姑妄待小妖说与听
+[01:39.570]想卿踏雨传怀抱
+[01:43.140]愿你安眠罗幕中
+[01:47.070]万里丹山路巴山与谁话碧城灯
+[01:54.630]露气氤氲往来渐惯
+[02:01.680]夜灯朗照失天蓝
+[02:07.800]春风吹不展留神阶下路
+[02:14.850]瑶盏怀情圆鲸正酣
+[02:22.860]不语由温去来偶错
+[02:30.390]寒夕因卿借酒耽
+[02:35.940]那年冬日夜海棠花下坐
+[02:43.080]相倚心安月色正寒
+[02:50.190]风因花气入淮南
+[02:53.700]余温暂傍一杯甘
+[02:57.660]此夜桥头水何时到洛城许华年
+[03:04.320]苦芯燃剩一丝甘
+[03:07.770]今生聚少趁江南
+[03:11.820]聚时香枕在执手胭脂草付风烟
+[03:18.330]深闺心绪最相知
+[03:21.930]流红两不知
+[03:25.320]柔波明镜两蛾眉
+[03:28.920]修成常展眉
+[03:32.490]风因花气入淮南
+[03:36.060]余温暂傍一杯甘
+[03:39.990]东中院小窗梅香似酒香正华年
+[03:46.650]苦芯燃剩一丝甘
+[03:50.100]今生聚少趁江南
+[03:53.700]狸奴与绮罗一树正滂沱写云烟`;
+
+        const SAMPLE_LRC_ANYUAN = `[00:05.000]演唱：东方栀子-檀唇
+[00:08.000]制作：林雨夜
+[00:10.000]出品：上海交通大学国学社
+[00:12.000]2025年12月
+[00:14.340]新楼初建成岁时近暮冬
+[00:21.270]武昌城门外清越长歌声
+[00:27.990]上皇赐酒来妙舞楼中
+[00:35.010]英雄叹安远壮志成空
+[00:41.790]登此高楼应太息
+[00:44.790]不得词仙为侣
+[00:48.300]但满眼芳草萋萋千里
+[00:55.530]啜酒观花虽足乐
+[00:58.560]惟恨韶华徒虚掷
+[01:01.980]余谁共我同叹秋霁
+[01:22.950]旧楼再登临秋意日渐深
+[01:29.970]二十年重过故人何处寻
+[01:36.660]感国事飘摇慨神州陆沉
+[01:43.500]天下奇男子总觉惊心
+[01:50.370]浅流寒沙新来去
+[01:53.370]眼前黄鹤故山
+[01:56.820]山外鼓角更引客心澜
+[02:04.170]闻说江河一发悬
+[02:07.140]布衣无奈空叹
+[02:10.560]桂花美酒怎得暂欢
+[02:17.820]曾游柳萧萧星冉冉处
+[02:21.240]夜中湖光秋色美
+[02:24.750]后来幽梦多少岁
+[02:26.430]红衣青灯共沉醉
+[02:28.080]思归情只付江水
+[02:31.500]曾奏赋明光上疏北阙
+[02:35.040]待功成方退
+[02:37.920]今多景楼前
+[02:40.050]垂虹亭下
+[02:41.820]眠去聊相慰
+[02:49.170]安远聚后二十载
+[02:51.600]词客各自飘零
+[02:55.140]惟余此楼记当年歌声
+[03:02.550]而今龙洲道人作古
+[03:05.880]白石亦远去
+[03:09.360]后人空向安远诉情衷`;
+
+        // --- 3. 工具函数 ---
+        const parseLrc = (lrcString) => {
+            if (!lrcString) return [];
+            // 兼容各种换行符
+            const lines = lrcString.split(/\r?\n/);
+            const result = [];
+            const timeReg = /\[(\d{2}):(\d{2})\.(\d{2,3})\]/;
+            lines.forEach(line => {
+                const match = timeReg.exec(line);
+                if (match) {
+                    const min = parseInt(match[1]);
+                    const sec = parseInt(match[2]);
+                    const ms = parseInt(match[3] || '0'); 
+                    const time = min * 60 + sec + ms / 1000;
+                    const text = line.replace(timeReg, '').trim();
+                    if (text) result.push({ time, text });
+                }
+            });
+            return result;
+        };
+
+        const formatTime = (time) => {
+            if (!time) return "0:00";
+            const min = Math.floor(time / 60);
+            const sec = Math.floor(time % 60);
+            return `${min}:${sec.toString().padStart(2, '0')}`;
+        };
+
+        // --- 4. 音乐播放器组件 (修复滚动：使用 scrollTo 替代 scrollIntoView) ---
+        const MusicPlayer = ({ audioSrc, lrcContent, coverImage }) => {
+            const audioRef = useRef(null);
+            const lrcContainerRef = useRef(null);
+            const [isPlaying, setIsPlaying] = useState(false);
+            const [currentTime, setCurrentTime] = useState(0);
+            const [duration, setDuration] = useState(0);
+            const [lyrics, setLyrics] = useState([]);
+            const [activeLyricIndex, setActiveLyricIndex] = useState(0);
+
+            useEffect(() => {
+                if (!lrcContent) {
+                    setLyrics([]);
+                    return;
+                }
+
+                const loadLyrics = async () => {
+                    // 判断是否为 .lrc 文件路径 (简单的后缀判断)
+                    const isLrcFile = typeof lrcContent === 'string' && lrcContent.trim().toLowerCase().endsWith('.lrc');
+
+                    if (isLrcFile) {
+                        try {
+                            const response = await fetch(lrcContent);
+                            if (!response.ok) throw new Error('Network response was not ok');
+                            const text = await response.text();
+                            setLyrics(parseLrc(text));
+                        } catch (error) {
+                            console.error("Failed to load LRC file:", error);
+                            // 如果加载失败，显示提示信息
+                            setLyrics([{ time: 0, text: "无法加载歌词 (请确保使用 Web Server 运行)" }]);
+                        }
+                    } else {
+                        // 认为是直接传入的歌词文本
+                        setLyrics(parseLrc(lrcContent));
+                    }
+                };
+
+                loadLyrics();
+                setActiveLyricIndex(0);
+            }, [lrcContent]);
+
+            const handleTimeUpdate = () => {
+                const time = audioRef.current.currentTime;
+                setCurrentTime(time);
+                
+                let activeIndex = -1;
+                for (let i = 0; i < lyrics.length; i++) {
+                    if (time >= lyrics[i].time) {
+                        activeIndex = i;
+                    } else {
+                        break;
+                    }
+                }
+                
+                if (activeIndex !== activeLyricIndex) {
+                    setActiveLyricIndex(activeIndex);
+                    // 修复：手动计算 scrollTop，彻底防止页面整体上移
+                    if (lrcContainerRef.current && activeIndex !== -1) {
+                        const paddingContainer = lrcContainerRef.current.children[0];
+                        const activeEl = paddingContainer?.children[activeIndex];
+                        
+                        if (activeEl) {
+                            const container = lrcContainerRef.current;
+                            // 计算目标元素相对于容器顶部的偏移量 (减去上部占位高度)
+                            // 注意：这里的 activeEl.offsetTop 是相对于 paddingContainer 的
+                            // 容器滚动目标 = 元素位置 - 容器高度一半 + 元素高度一半
+                            const targetScrollTop = activeEl.offsetTop - (container.clientHeight / 2) + (activeEl.clientHeight / 2);
+                            
+                            container.scrollTo({
+                                top: targetScrollTop,
+                                behavior: 'smooth'
+                            });
+                        }
+                    }
+                }
+            };
+
+            const togglePlay = () => {
+                if (isPlaying) audioRef.current.pause();
+                else audioRef.current.play();
+                setIsPlaying(!isPlaying);
+            };
+
+            const handleSeek = (e) => {
+                const time = Number(e.target.value);
+                audioRef.current.currentTime = time;
+                setCurrentTime(time);
+            };
+
+            return (
+                <div className="w-full h-full flex flex-col gap-4">
+                    {/* 上部：16:9 意境图 + 控制器 */}
+                    <div className="w-full aspect-video bg-gray-100 relative group overflow-hidden rounded-xl shadow-lg border border-yuye-accent shrink-0">
+                        {coverImage ? (
+                            <img src={coverImage} alt="Cover" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"/>
+                        ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-yuye-accent to-gray-200 flex items-center justify-center flex-col gap-2">
+                                <Music className="text-gray-400 w-12 h-12" />
+                                <span className="text-gray-400 text-sm italic font-serif">意境图 (16:9)</span>
+                            </div>
+                        )}
+                        
+                        {/* 悬浮控制器 */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-4 md:p-6 transition-opacity duration-300">
+                            <div className="flex items-center gap-4">
+                                <button 
+                                    onClick={togglePlay}
+                                    className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gold-dust hover:bg-yellow-600 text-white flex items-center justify-center shadow-lg transition-transform hover:scale-105 shrink-0"
+                                >
+                                    {isPlaying ? <Pause size={20} /> : <Play size={20} className="ml-1" />}
+                                </button>
+                                <div className="flex-1 flex flex-col gap-1">
+                                    <input 
+                                        type="range" 
+                                        min="0" max={duration || 100} 
+                                        value={currentTime}
+                                        onChange={handleSeek}
+                                        className="w-full h-1 bg-white/50 rounded-lg appearance-none cursor-pointer accent-gold-dust"
+                                    />
+                                    <div className="flex justify-between text-xs text-white/90 font-mono">
+                                        <span>{formatTime(currentTime)}</span>
+                                        <span>{formatTime(duration)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 下部：歌词滚动 */}
+                    <div className="w-full flex-1 bg-white/40 backdrop-blur-sm border border-yuye-accent rounded-xl shadow-inner p-4 relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-full pointer-events-none z-10 mask-gradient bg-transparent"></div>
+                        <div className="h-full overflow-y-auto no-scrollbar" ref={lrcContainerRef}>
+                            <div className="py-[40%]"> {/* 占位，确保第一句和最后一句能在中间 */}
+                                {lyrics.length > 0 ? lyrics.map((line, idx) => (
+                                    <p 
+                                        key={idx} 
+                                        className={`text-center py-2 transition-all duration-500 font-serif
+                                            ${idx === activeLyricIndex ? 'text-ink-black font-bold text-lg md:text-xl scale-105' : 'text-gray-400 text-sm md:text-base'}
+                                        `}
+                                    >
+                                        {line.text}
+                                    </p>
+                                )) : (
+                                    <div className="flex items-center justify-center text-gray-400 italic font-serif h-full">
+                                        - 纯音乐或暂无歌词 -
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <audio 
+                        ref={audioRef} 
+                        src={audioSrc} 
+                        onTimeUpdate={handleTimeUpdate}
+                        onLoadedMetadata={(e) => setDuration(e.target.duration)}
+                    />
+                </div>
+            );
+        };
+
+        // --- 5. 故事卡片组件 ---
+        const StoryCard = ({ story }) => {
+            const [isRevealed, setIsRevealed] = useState(false);
+
+            return (
+                <div className="w-full h-full flex flex-col">
+                    <motion.div 
+                        layout
+                        className="relative flex-1 bg-[#FAF9F6] border border-gold-dust/30 rounded-lg shadow-sm overflow-hidden flex flex-col"
+                    >
+                        {!isRevealed ? (
+                            <motion.div 
+                                key="cover"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.3 }}
+                                className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-yuye-accent/10 cursor-pointer hover:bg-yuye-accent/20 transition-colors group"
+                                onClick={() => setIsRevealed(true)}
+                            >
+                                <motion.div 
+                                    animate={{ scale: [1, 1.05, 1] }} 
+                                    transition={{ duration: 2, repeat: Infinity }}
+                                    className="p-4 rounded-full bg-white/80 shadow-sm group-hover:shadow-md"
+                                >
+                                    <Quote size={32} className="text-gold-dust"/>
+                                </motion.div>
+                                <span className="mt-4 font-bold text-ink-black font-serif tracking-widest text-lg group-hover:text-gold-dust transition-colors">
+                                    点击揭晓 · 创作手记
+                                </span>
+                            </motion.div>
+                        ) : (
+                            <motion.div 
+                                key="content"
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -20 }}
+                                transition={{ duration: 0.5, delay: 0.1 }}
+                                className="flex-1 overflow-y-auto p-6 md:p-8 no-scrollbar"
+                            >
+                                <div className="flex justify-between items-start mb-4">
+                                    <h3 className="font-bold text-gold-dust font-serif text-lg flex items-center gap-2">
+                                        <Scroll size={18}/>
+                                        幕后故事
+                                    </h3>
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); setIsRevealed(false); }}
+                                        className="text-gray-400 hover:text-ink-black transition-colors"
+                                    >
+                                        <ChevronRight size={18} className="rotate-180"/>
+                                    </button>
+                                </div>
+                                <div className="text-gray-700 leading-relaxed text-base md:text-lg whitespace-pre-line font-serif">
+                                    {story}
+                                </div>
+                            </motion.div>
+                        )}
+                    </motion.div>
+                </div>
+            );
+        };
+
+        // --- 新增：UGC 轮播组件 ---
+        const UGCRotation = ({ items }) => {
+            const [index, setIndex] = useState(0);
+
+            const handleNext = (e) => {
+                e.stopPropagation(); // 阻止冒泡，防止触发全局切页
+                setIndex((prev) => (prev + 1) % items.length);
+            };
+
+            const current = items[index];
+
+            return (
+                <div className="w-full max-w-5xl flex flex-col justify-center items-center z-20">
+                    <motion.div
+                        key={index}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 0.4 }}
+                        className="bg-[#FAF9F6]/90 backdrop-blur-md border border-gold-dust/30 p-8 md:p-12 rounded-xl shadow-lg cursor-pointer hover:shadow-xl transition-all w-full relative group"
+                        onClick={handleNext}
+                    >
+                        <div className="absolute top-4 right-4 text-xs text-gray-400 font-mono group-hover:text-gold-dust transition-colors">
+                            {index + 1} / {items.length} · 点击切换
+                        </div>
+                        
+                        <div className="flex flex-col gap-6">
+                            <Quote className="text-gold-dust w-10 h-10 opacity-60" />
+                            <p className="text-xl md:text-2xl text-ink-black font-serif leading-relaxed whitespace-pre-line min-h-[100px] flex items-center text-justify">
+                                {current.content}
+                            </p>
+                            <div className="flex flex-col items-end border-t border-gray-200/50 pt-4 mt-2">
+                                <span className="text-lg font-bold text-ink-black font-serif">{current.source}</span>
+                                <span className="text-gray-500 text-sm mt-1">{current.author}</span>
+                            </div>
+                        </div>
+                    </motion.div>
+                </div>
+            );
+        };
+
+        // --- 6. 数据配置 ---
+        const slides = [
+            {
+                id: 'cover',
+                type: 'cover',
+                title: '弦歌四载 · 与诗同行',
+                subtitle: '国学社乐府部 · 四周年围炉会',
+                year: '2021 - 2025',
+                icon: <Sparkles className="w-16 h-16 text-gold-dust opacity-80" />
+            },
+            {
+                id: 'timeline',
+                type: 'timeline',
+                title: '我们的足迹',
+                items: [
+                    { year: '2021.10.23', title: '缘起', desc: '《水灯记》登上舞台，古风音乐讨论萌芽。' },
+                    { year: '2021.12.05', title: '成立', desc: '乐府部正式成立，初创团队集结。' },
+                    { year: '2021.12.26', title: '初啼', desc: '《溯流沙》问世，获“汇创青春”三等奖。' },
+                    { year: '2022.10.29', title: '立格', desc: '首届“笙歌且共翻新阕”填词赛启动。' },
+                    { year: '2023.02.23', title: '雅乐', desc: '《画蝶》亮相研究生毕业晚会。' },
+                    { year: '2023.11.30', title: '传承', desc: '“白雪换新词”启动，学术讲座开启。' },
+                    { year: '2024.03.21', title: '灵感', desc: '凌晨四点半，一架琴，两个人，三份手写谱。' },
+                    { year: '2024.05.17', title: '回响', desc: '《大东》问世。' },
+                    { year: '2025.01.19', title: '格物', desc: '《未解忆长安》问世，探索依字行腔。' },
+                    { year: '2025.03.21', title: '新篇', desc: '第三届挑战赛“江南好”启动。' },
+                    { year: '2025.07.28', title: '约定', desc: '《来春可拟共兰舟》问世。' },
+                    { year: '2025.09.13', title: '远望', desc: '中西乐团原创项目启动。' },
+                    { year: '2025.11.18', title: '唱和', desc: '《聚少趁江南》问世，收拢两个人的故事。' },
+                    { year: '2025.12.05', title: '重逢', desc: '神秘新曲问世，共襄四周年盛举。' }
+                ]
+            },
+            {
+                id: 'song1',
+                type: 'song',
+                tag: 'Chapter I · 匠心',
+                title: '溯流沙',
+                quote: '“循一沿纹理繁杂，拓一笔往日锋芒”',
+                audioSrc: 'assets/audio/溯流沙.m4a',
+                lrc: SAMPLE_LRC_SULIUSHA,
+                cover: 'assets/images/溯流沙.png',
+                story: `缘起：“这已经不只是作业了”
+歌曲的监制，来自上海交通大学文创学院的洪若馨，在一次关于“上海图书馆痛点解决方案”的课程作业中，选择了一个鲜为人知的切入点——古籍文献修复。当她采访修复老师时，对方平静地说：“他们所做的只是希望让人们形成文化尊重。”
+这句话深深打动了若馨。她意识到，这群“古籍医生”日复一日地埋首故纸，在“寂寂寒窗”中“打点模糊文字”，所求的并非功名，而仅仅是一份尊重。若馨在后来的分享中写道：“这个作业对我来说就已经不是作业了，是发自内心的想去做一些东西。”
+
+集结：“国学社有很多很厉害的人”
+怀着这份感动，若馨带着她的“大方案”——包括展览、绘本，以及一个核心的“歌曲”——在国学社发出了求助。她知道这里“可以写诗词歌赋”，也听说大家“打算开始自己尝试作曲”。
+这封真诚的“小作文”如同一颗石子投入湖中，激起了国学社成员们内心深处的共鸣。这不仅是一个技术上的挑战，更是一次“有深意的事情”。
+大家的热情被点燃了。作词人归荑接过了重任，没有停留在空泛的想象，而是深入研究了若馨带回的古籍修复资料，将“函套”、“拓片”、“研墨”、“挑纹理”等复杂的工序，化作“挽一抔故土流沙”、“拓一笔往日锋芒”的诗意表达。作曲与编曲林雨夜则用悠扬的古风旋律，将这份跨越千年的匠心与孤寂娓娓道来。
+
+新生：乐府部的诞生
+从一个人的感动，到一个团队的共创，《溯流沙》的创作过程，展现了社团成员间惊人的协作力与共同的人文关怀。大家的目标高度一致：不仅要创作一首好听的歌，更要传递那份“文化尊重”的内核。
+更具意义的是，在《溯流沙》的创作过程中，国学社内部这股对音乐创作的热情与力量不断汇聚，最终催生了“乐府部”的正式诞生。2021年12月5日，乐府部正式成立，由陈鲲鹏任部长、李雨桐任副部长。
+《溯流沙》不仅是乐府部的开山之作，它本身也成为了一个最佳范本：它源自对传统文化的深度关怀，并由一群志同道合的年轻人协作完成。这首歌的背后，是一个社团从自发的情感共鸣，走向有建制、有传承的文化实践的生动故事。`
+            },
+            {
+                id: 'song2',
+                type: 'song',
+                tag: 'Chapter II · 音韵',
+                title: '未解忆长安',
+                quote: '“唱得，和念的一样好听”',
+                audioSrc: 'assets/audio/未解忆长安.m4a',
+                lrc: SAMPLE_LRC_WEIJIE,
+                cover: 'assets/images/未解忆长安.png',
+                story: `在国学社，音韵与格律始终是大家敬畏的核心。作曲者林雨夜自2019年起，便坚持在创作中探索“依字行腔”，并将这一理念带入了乐府部。但一个问题始终萦绕在大家心中：“古诗词的格律到底有什么意义？我们能用现代的音乐把它们唱出来吗？”
+2022年下半年的一天，为了回答这个“终极问题”，她决定不做理论探讨，而是直接交出一份答卷。
+
+她选择了诗圣杜甫的《月夜》，一首格律严谨的五言律诗，以此为“考题”，创作了一段demo。这次创作的核心原则只有一个——彻底的“依字行腔”。她没有添加华丽的编曲，也没有刻意设计抓耳的旋律，而是让曲调完全服务于汉字本身的四声。当“今夜鄜州月”的“夜”字（去声）自然下降，当“香雾云鬟湿”的“湿”字（入声，现代读阴平）自然收束，奇妙的事情发生了。
+
+“唱起来真的和普通话念起来差不多。”——这句评价，恰恰是对这份demo最高的赞扬。它证明了古人传承千年的“格律”，并非束缚创作的枷锁，而是汉语与生俱来的音乐蓝图。诗词的平仄起伏，本身就是旋律。
+
+这个小样在社团内部流传，它所蕴含的对语言本身的尊重和“人文关怀”触动了大家。2025年初，这个珍贵的demo被重新制作和打磨，正式定名为《未解忆长安》发布。
+
+正如一位听众的留言：“谢谢椰椰做出这么好的音乐，每次听都感觉自己平静下来。”这份平静，或许就来自于旋律与语言最本真的和谐。`
+            },
+            {
+                id: 'song_dadong',
+                type: 'song',
+                tag: 'Chapter III · 悲歌',
+                title: '大东',
+                quote: '“维天有汉，监亦有光”',
+                audioSrc: 'assets/audio/大东.m4a',
+                lrc: SAMPLE_LRC_DADONG,
+                cover: 'assets/images/大东.png',
+                story: `“人不可能两次踏入一条河流。”对于《大东》的创作者木猫来说，这首歌诞生于一个无法复制的夜晚。
+
+若合一契的悲歌
+故事始于本科时期一段压抑的时光。那时的木猫正处于生活的低谷，“风波迭起，芳情不度”。在一种强烈的“去国怀乡”的情绪中，他偶然刷到了《诗经·大东》的讲解视频。
+这是三千年前殷商遗民的歌谣：天上的银河灿烂，地上的征役无休；贵族享乐，百姓赤贫。这种跨越时空的苦闷，让木猫瞬间产生了一种“若合一契”的战栗——他仿佛听懂了那些仰望星空的古人。
+
+灵感与格律的交响
+《大东》的原诗结构奇特，前四段沉郁质实，后三段却瑰丽奇崛，仿佛是由两篇不同的作品拼接而成。创作的过程也呼应了这种结构。
+在那次灵感迸发的洗澡间隙，木猫脑海中突然闪过黄霑《沧海一声笑》的豪迈，决定用宫商角徵羽的五声音阶起头，一气呵成谱写了后半段的高潮——既不可张扬宏大，也不能流于琐碎，那是压抑后的爆发。
+而前半段的叙事，则由林雨夜（椰椰）深度参与。她用国学社一贯坚持的“依字行腔”原则，对旋律进行了精细的打磨与调整，弥补了原本音准上的瑕疵，让古老的文字在现代的律动中找到了最准确的咬字与呼吸。
+
+四点半的绝响
+那是一个疯狂的夜晚。两位创作者，一间小房间，床与钢琴，凌晨四点半。“用情绪的花火拼凑出曲调”，木猫说，即便后来远渡重洋，拥有了更好的独立空间，他也再没能复刻那一晚纯粹的无拘表达。
+《大东》不仅是一首复古之作，它更像是一个现代灵魂与古老历史的握手。闭上眼睛，你似乎能听到那来自东方的歌谣：他们痛苦，他们悲歌，但他们依然在星空下，顶天立地地活着。`
+            },
+            {
+                id: 'song3',
+                type: 'song',
+                tag: 'Chapter IV · 约定',
+                title: '来春可拟共兰舟',
+                quote: '“彼岸休行多劫火，来春可拟共兰舟”',
+                audioSrc: 'assets/audio/来春可拟共兰舟.m4a',
+                lrc: SAMPLE_LRC_LAICHUN,
+                cover: 'assets/images/来春可拟共兰舟.png',
+                story: `《来春可拟共兰舟》的背后，是一个关于守护与承诺的故事。
+
+故事的主角是国学社一位特别的“编外人员”。她因偶然的契机加入，一直默默地为社团提供支持。故事的开端，是她远在衢州游览时写下的一首七律，诗中“醉卧州衢思上海，神离海上望衢州”的句子，遥寄着她对上海朋友们的思念。
+
+一年后，一个惊险的插曲猝然而至。远在上海的国学社诸君惊闻她陷入了生命垂危的困境。在焦急万分、四处联系打探安危的时刻，林雨夜含泪写下了第二首诗。她采用了那位朋友原诗的韵脚——这在古典诗词中被称为“次韵”，本身就带有一种“你来我往”的深切回应。
+
+这首诗，是一份最沉痛的祈愿。诗中写道：“彼岸休行多劫火，来春可拟共兰舟？”这不仅是一句问话，更是一个拼尽全力的锚点。它试图为一个深陷绝望、看不到未来希望的人，重新构建一个具体的、关于“下个春天”的期待。“无常若是有情客，也请归人到此州。”（如果无常懂得哪怕一点点感情，也请让远行的人回到这里来吧。）
+
+万幸，这份祈愿得到了回应。朋友转危为安。
+
+又过了一年，两位朋友终于团聚。第三首“次韵”诗，记录下这“于今携手小船头”的动人场景。经历了“人事凋零无去路”的幽谷，才更懂“兰心缱绻愿同舟”的珍贵。暖风缓缓地吹过，正如同《论语》中“莫春者，春服既成，冠者五六人，童子六七人，浴乎沂，风乎舞雩，咏而归”的图景，是一种历经风雨后的平静与新生。因此，这首歌被设计为一场两位歌者的对唱，并以“依字行腔”的旋律，去承载这三首格律诗的重量。它所唱的，不只是音韵，更是一个用诗词和友情“约到”的春天。`
+            },
+            {
+                id: 'song4',
+                type: 'song',
+                tag: 'Chapter V · 联结',
+                title: '聚少趁江南',
+                quote: '“晚世拘多妨海外，今生聚少趁江南”',
+                audioSrc: 'assets/audio/聚少趁江南.m4a',
+                lrc: SAMPLE_LRC_JUSHAO,
+                cover: 'assets/images/聚少趁江南.png',
+                story: `《聚少趁江南》是一首极具实验性质的“集句”歌曲。全曲歌词并非全新创作，而是从两位主角多年来相互赠答、唱和的三十余首诗词作品中，精选摘录并重新“剪辑”而成。这首歌像是一部情感的蒙太奇，将“东中院小窗”的同窗记忆、“巴山夜雨”的异地相思，以及无数个“灯轻帐暖”的瞬间，拼贴成一幅完整的流动的画卷。它不仅是一首歌曲，更是两位诗人用平仄与韵脚堆叠出的一份厚重的编年史。
+
+拼贴：碎金重铸的“集句”艺术
+“集句”是中国古典文学中一种极高难度的创作方式，要求作者将前人（或自己）的零散诗句，重新组合成意脉贯通的新篇。 《聚少趁江南》将这一传统做到了极致。歌词中，“银汉漂漂”的宏大天象与“雨碎春衫薄”的细腻体感无缝衔接，每一句都来自不同的时空，却在旋律中奇迹般地指向了同一个主题——离别与重逢。这三十余首诗词，原本散落在聊天记录、手稿和朋友圈的角落，此刻却如碎金重铸，被赋予了全新的生命。
+
+唱和：两颗灵魂的加密通话
+在歌词的字里行间，隐藏着大量只有两位当事人才懂的“密码”。从“那年冬日夜，海棠花下坐”的静谧，到“万里丹山路，巴山与谁话”的遥望，每一句都是一次灵魂的呼应。 这不仅是文学上的切磋，更是一种深情的生活记录。当语言不足以表达思念时，她们选择用诗词对话。这种“唱和”的传统，在现代快节奏的语境下显得尤为奢侈和珍贵。这首歌，就是她们将无数次“见字如面”的瞬间，凝结成的永恒琥珀。
+
+惜时：苦芯燃尽后的余温
+“苦芯燃剩一丝甘，今生聚少趁江南。” 这句反复吟唱的Hook，是整首歌的题眼。在经历了“波声衔信小”的等待和“顾影入烟深”的孤独后，所有的情绪最终落地于对当下的珍惜。 哪怕是“东中院”的一扇小窗，哪怕是“狸奴”慵懒的一瞥，只要是“聚时”，便值得用尽全力去铭记。人生如寄，聚散无常，唯有趁着这美好的时光，哪怕只有那一杯“余温”，也要痛快地共饮。`
+            },
+            {
+                id: 'newsong_reveal',
+                type: 'reveal',
+                tag: '四周年 · 献礼',
+                title: '【 此时此刻 · 全球首发 】',
+                subtitle: '请聆听，我们的下一个篇章',
+                icon: <Play className="w-20 h-20 fill-current text-gold-dust" />
+            },
+            {
+                id: 'newsong_play',
+                type: 'song',
+                tag: '四周年 · 新歌',
+                title: '安远',
+                quote: '一楼、二客，与一场跨越八百年的隔空对酌',
+                audioSrc: 'assets/audio/安远.mp3',
+                lrc: SAMPLE_LRC_ANYUAN,
+                cover: 'assets/images/安远.png',
+                story: `《安远》之名取自武昌安远楼（今黄鹤楼南楼）。公元1186年安远楼落成，白石道人姜夔与诸友参加了落成典礼。典礼上虽然温馨热闹，但姜夔心中却感到忧愁——漂泊天涯的客愁和岁月虚掷的闲愁。于是写下《翠楼吟·月冷龙沙》，有“天涯情味。仗酒祓清愁，花销英气”之语。二十年之后的1206年，龙洲道人刘过，又一次登上此楼。于时物是人非，国事飘摇，作为“天下奇男子”的刘过，面对此情此景，不禁感到“旧江山浑是新愁”。于是写下《唐多令·芦叶满汀洲》，有“欲买桂花同载酒，终不似、少年游”之语。二十年里，两位境遇不同的词人在这栋楼上各自抒怀，留下千古名篇。虽兴怀之由相异，然真挚情感，总令后人感慨系之，遂成此曲。`
+            },
+            {
+                id: 'open_mic',
+                type: 'interactive',
+                title: '开放麦 · 且听君唱',
+                subtitle: '今晚的舞台，属于每一个人',
+                desc: '点歌 / 清唱 / 乐器演奏\n与你同在，这里是乐府',
+                icon: <Mic className="w-16 h-16 text-ink-black" />
+            },
+            {
+                id: 'ugc',
+                type: 'ugc', // Changed type
+                title: '#一句歌词，一个江湖#',
+                subtitle: '精选留言展示',
+                items: [
+                    {
+                        content: "“雨到他乡 还剩几分江南花香 / 寄出的信 鸿雁大约还在路上 / 晚景更萧疏 堪动宋玉悲凉 / 苹花渐老 梧叶飘黄”\n海派韵律与雨夜独特的唱腔相得益彰，将他乡旅人闲听雨落的心绪，似涓涓细流娓娓道来。《他乡雨》是雨夜佬的代表作，它并未以复杂的演唱技巧藻饰，只是白描，只是勾勒。那些藏匿于古典诗词的意象，被自然而然地列锦。一簇苹花，一片梧叶，一缄家书，一段记忆，都在一帘秋雨的旅梦中。最后请允许我用义山的一首五绝为此歌作注：“滞雨长安夜，残灯独客愁。故乡云水地，归梦不宜秋。”",
+                        author: "@随遇而安",
+                        source: "《他乡雨》"
+                    },
+                    {
+                        content: "“直到我重归浮沫 / 随风旖旎为浪花半朵 / 你眼中奔涌天地广阔 / 我如何忘记呢”\n这首歌讲的是成长与离别，在我刚入大学还深陷对高中同学的思念漩涡之中，便听到了这首歌。歌曲很空灵，夜里一个人骑着单车总是听，时常流几滴没出息的眼泪，慢慢地这首歌赋予我的东西已经化为坚定与信念，丁当丁当的乐器（不知道啥乐器[旺柴]）似乎像人生的一簇节拍。生而为人，都是要去历练它的。青春是想法很多的站点，对生命的悟性大概是其中最重要的一环吧。",
+                        author: "@烟火",
+                        source: "《珍珠》"
+                    },
+                    {
+                        content: `“临行应许他年聚，约到江南第一州”
+某种程度上今年对于对歌词相当挑剔的我来说是个听歌的荒年，真正优秀的新歌不多，很多时候还是把过去的老歌反复反刍。不过雨夜佬的音乐在今年听过的一众国风歌曲中绝对是惊才绝艳的异类，言浅意深的故事和依字行腔的悠扬旋律都让人眼前一亮。真的很荣幸在大学生涯的结尾遇到了交大国学社这么多热爱文学的朋友们。
+来程邈，加餐故旧，相与道云深。`,
+                        author: "@昈旿昤昽",
+                        source: "《来春可拟共兰舟》"
+                    }
+                ],
+                icon: <MessageSquareQuote className="w-16 h-16 text-ink-black" />
+            },
+            {
+                id: 'cake',
+                type: 'interactive',
+                title: '庆生 · 岁岁年年',
+                subtitle: '乐府四岁啦！',
+                desc: '分蛋糕环节',
+                icon: <Cake className="w-16 h-16 text-gold-dust" />
+            },
+            {
+                id: 'photo',
+                type: 'interactive',
+                title: '定格 · 弦歌不辍',
+                subtitle: '全员大合影',
+                desc: '2025.12.05 @ 围炉夜话',
+                icon: <Camera className="w-16 h-16 text-ink-black" />
+            },
+            {
+                id: 'outro',
+                type: 'cover',
+                title: '感谢有你',
+                subtitle: 'Designed by Yuefu Dept.',
+                year: 'End.',
+                icon: <Sparkles className="w-12 h-12 text-gold-dust opacity-80" />
+            }
+        ];
+
+        // --- 7. 主程序 App ---
+        function App() {
+            const [currentSlide, setCurrentSlide] = useState(0);
+            const [isAnimating, setIsAnimating] = useState(false); // 状态锁
+
+            // 切换幻灯片逻辑
+            const changeSlide = useCallback((direction) => {
+                if (isAnimating) return; // 如果正在动画中，拒绝切换
+
+                if (direction === 'next') {
+                    if (currentSlide < slides.length - 1) {
+                        setIsAnimating(true);
+                        setCurrentSlide(prev => prev + 1);
+                    }
+                } else if (direction === 'prev') {
+                    if (currentSlide > 0) {
+                        setIsAnimating(true);
+                        setCurrentSlide(prev => prev - 1);
+                    }
+                }
+            }, [currentSlide, isAnimating]);
+
+            // 监听动画结束，解锁
+            useEffect(() => {
+                if (isAnimating) {
+                    const timer = setTimeout(() => {
+                        setIsAnimating(false);
+                    }, 800); // 800ms 对应 transition 动画时长
+                    return () => clearTimeout(timer);
+                }
+            }, [isAnimating]);
+
+            // 键盘监听
+            useEffect(() => {
+                const handleKeyDown = (e) => {
+                    if (e.key === 'ArrowRight' || e.key === 'Space') {
+                        changeSlide('next');
+                    } else if (e.key === 'ArrowLeft') {
+                        changeSlide('prev');
+                    }
+                };
+                window.addEventListener('keydown', handleKeyDown);
+                return () => window.removeEventListener('keydown', handleKeyDown);
+            }, [changeSlide]);
+
+            const slide = slides[currentSlide];
+
+            const renderContent = () => {
+                switch(slide.type) {
+                    case 'cover':
+                        return (
+                            <div className="flex flex-col items-center gap-6 md:gap-8">
+                                <motion.div animate={{ rotate: 360 }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }}>
+                                    {slide.icon}
+                                </motion.div>
+                                <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-ink-black gold-text font-serif text-center">
+                                    {slide.title}
+                                </h1>
+                                <div className="h-px w-32 bg-ink-black opacity-20 my-4" />
+                                <p className="text-xl md:text-2xl text-gray-600 font-light tracking-widest">{slide.subtitle}</p>
+                                <p className="mt-8 text-sm font-mono text-gray-400">{slide.year}</p>
+                            </div>
+                        );
+                    
+                    case 'timeline':
+                        return (
+                            <div className="w-full max-w-4xl h-[80vh] flex flex-col items-center">
+                                <h2 className="text-4xl font-bold mb-8 text-ink-black font-serif gold-text shrink-0">{slide.title}</h2>
+                                <div className="w-full flex-1 overflow-y-auto no-scrollbar mask-gradient pr-4">
+                                    <div className="border-l-2 border-gold-dust/30 pl-8 ml-4 py-4 space-y-8">
+                                        {slide.items.map((item, idx) => (
+                                            <motion.div 
+                                                key={idx}
+                                                initial={{ opacity: 0, x: -20 }}
+                                                whileInView={{ opacity: 1, x: 0 }}
+                                                viewport={{ once: true }}
+                                                transition={{ duration: 0.5 }}
+                                                className="relative"
+                                            >
+                                                <div className="absolute -left-[41px] top-1.5 w-4 h-4 rounded-full bg-yuye-pink border-4 border-gold-dust" />
+                                                <div className="font-mono text-gold-dust font-bold text-lg">{item.year}</div>
+                                                <div className="text-xl text-ink-black font-bold mb-1 font-serif">{item.title}</div>
+                                                <div className="text-gray-600">{item.desc}</div>
+                                            </motion.div>
+                                        ))}
+                                    </div>
+                                    <div className="h-20" />
+                                </div>
+                            </div>
+                        );
+
+                    case 'song':
+                        return (
+                            // 修改：左右分栏布局
+                            <div className="w-full max-w-7xl h-[80vh] flex flex-col md:flex-row gap-6 md:gap-12 px-4">
+                                {/* 左栏：视听区 (Player + Lyrics) */}
+                                <div className="w-full md:w-1/2 flex flex-col h-full">
+                                    <MusicPlayer 
+                                        audioSrc={slide.audioSrc} 
+                                        lrcContent={slide.lrc} 
+                                        coverImage={slide.cover}
+                                    />
+                                </div>
+
+                                {/* 右栏：故事区 */}
+                                <div className="w-full md:w-1/2 flex flex-col justify-center h-full gap-6">
+                                    <div className="flex flex-col gap-2">
+                                        <span className="text-gold-dust tracking-[0.3em] text-sm uppercase font-bold border border-gold-dust/30 px-4 py-1 rounded-full bg-white/50 w-fit">
+                                            {slide.tag}
+                                        </span>
+                                        <h2 className="text-5xl md:text-6xl font-bold text-ink-black font-serif gold-text leading-tight">{slide.title}</h2>
+                                        <p className="text-xl italic text-gray-500 font-serif border-l-4 border-gold-dust pl-4 my-2">{slide.quote}</p>
+                                    </div>
+                                    
+                                    <div className="flex-1 overflow-hidden">
+                                        <StoryCard story={slide.story} />
+                                    </div>
+                                </div>
+                            </div>
+                        );
+
+                    case 'reveal':
+                        return (
+                            <div className="flex flex-col items-center justify-center h-[60vh] text-center">
+                                <motion.div
+                                    animate={{ scale: [1, 1.1, 1] }}
+                                    transition={{ duration: 2, repeat: Infinity }}
+                                    className="mb-10"
+                                >
+                                    {slide.icon}
+                                </motion.div>
+                                <span className="text-xl text-gold-dust mb-4 tracking-widest">{slide.tag}</span>
+                                <h1 className="text-5xl md:text-7xl font-bold mb-8 bg-clip-text text-transparent bg-gradient-to-r from-ink-black to-gold-dust font-serif">
+                                    {slide.title}
+                                </h1>
+                                <p className="text-2xl text-gray-600 animate-pulse font-serif">{slide.subtitle}</p>
+                            </div>
+                        );
+
+                    case 'interactive':
+                         return (
+                            <div className="flex flex-col items-center justify-center h-[60vh] gap-6 md:gap-8 text-center px-4">
+                                <motion.div
+                                    initial={{ y: 20, opacity: 0 }}
+                                    animate={{ y: 0, opacity: 1 }}
+                                    className="p-6 bg-white/40 border border-gold-dust/20 rounded-full"
+                                >
+                                    {slide.icon}
+                                </motion.div>
+                                <h1 className="text-4xl md:text-5xl font-bold text-ink-black font-serif">{slide.title}</h1>
+                                <div className="h-1 w-24 bg-gold-dust rounded-full"></div>
+                                <h2 className="text-xl md:text-2xl text-gray-600 font-serif">{slide.subtitle}</h2>
+                                {slide.desc && (
+                                    <div className="max-w-3xl whitespace-pre-line text-lg text-gray-500 leading-relaxed bg-white/30 p-6 rounded-xl border border-white font-serif">
+                                        {slide.desc}
+                                    </div>
+                                )}
+                            </div>
+                         );
+
+                    case 'ugc':
+                         return (
+                            <div className="flex flex-col items-center justify-center h-[80vh] gap-8 px-4 text-center">
+                                <div className="flex flex-col items-center gap-4">
+                                    <motion.div
+                                        initial={{ y: 20, opacity: 0 }}
+                                        animate={{ y: 0, opacity: 1 }}
+                                        className="p-4 bg-white/40 border border-gold-dust/20 rounded-full"
+                                    >
+                                        {slide.icon}
+                                    </motion.div>
+                                    <h1 className="text-3xl md:text-5xl font-bold text-ink-black font-serif">{slide.title}</h1>
+                                    <h2 className="text-l text-gray-500 font-serif">{slide.subtitle}</h2>
+                                </div>
+                                <UGCRotation items={slide.items} />
+                            </div>
+                         );
+
+                    default:
+                        return null;
+                }
+            };
+
+            return (
+                <div className="relative min-h-screen w-full flex items-center justify-center p-4 md:p-8">
+                    {/* 噪点遮罩 */}
+                    <div className="noise-overlay" />
+
+                    {/* 金粉山水背景 - 右下角可见，左上角淡出 */}
+                    <div className="landscape-bg" />
+
+                    <div className="fixed top-20 right-6 z-40 w-24 h-12 md:w-60">
+                        <img src="assets/images/logo.png" alt="Logo" className="w-full h-full object-contain"/>
+                    </div>
+
+                    {/* 金粉光晕背景 */}
+                    <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-gold-dust rounded-full blur-[150px] opacity-10 animate-pulse pointer-events-none" />
+                    <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-yuye-accent rounded-full blur-[150px] opacity-30 pointer-events-none" />
+
+                    {/* 内容容器 */}
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={currentSlide}
+                            initial={{ opacity: 0, y: 20, filter: 'blur(10px)' }}
+                            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                            exit={{ opacity: 0, y: -20, filter: 'blur(10px)' }}
+                            transition={{ duration: 0.8 }}
+                            className="w-full flex justify-center z-10"
+                        >
+                            {renderContent()}
+                        </motion.div>
+                    </AnimatePresence>
+
+                    {/* 底部导航提示 */}
+                    <div 
+                        className={`fixed bottom-6 w-full text-center text-xs text-ink-black flex justify-center items-center gap-2 cursor-pointer z-50 transition-opacity duration-300 ${isAnimating ? 'opacity-0' : 'opacity-30 hover:opacity-100 animate-bounce'}`}
+                        onClick={() => changeSlide('next')}
+                    >
+                        <span>点击屏幕或按方向键继续</span>
+                        <ChevronRight size={12} />
+                    </div>
+                    
+                    {/* 顶部进度条 */}
+                     <div className="fixed top-0 left-0 w-full h-1 bg-gray-200 z-50">
+                        <div 
+                            className="h-full bg-gold-dust transition-all duration-500"
+                            style={{ width: `${((currentSlide + 1) / slides.length) * 100}%` }}
+                        />
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
